@@ -72,18 +72,28 @@ int main()
         // Read binary file and description file.
         net = cv::dnn::readNetFromCaffe(path + NAME_DEPLOY_FILE.data(), path + NAME_MODEL_FILE.data());
         if (net.empty()) {
+            std::cerr << "Could not load Caffe_net!" << std::endl;
             return EXIT_FAILURE;
         }
 
         const double start = cv::getTickCount();
-        const cv::Mat blob = cv::dnn::blobFromImage(source, 1.0, cv::Size(224, 224), cv::Scalar(104, 117, 123)); // Convert the read image to blob.
+
+        // Convert the read image to blob.
+        static constexpr double scalefactor = 1.0; // The image pixel value is scaled by the scaling factor (Scalefactor).
+        const cv::Mat blob = cv::dnn::blobFromImage(source, // Input the image to be processed or classified by the neural network.
+            scalefactor, // After the image is subtracted from the average value, the remaining pixel values ​​are scaled to a certain extent.
+            cv::Size(224, 224), // Neural network requires the input image size during training.
+            cv::Scalar(104, 117, 123) /* Mean needs to subtract the average value of the image as a whole.
+                                      If we need to subtract different values ​​from the three channels of the RGB image,
+                                      then 3 sets of average values ​​can be used. */
+        );
+
         net.setInput(blob, "data");
         const cv::Mat score = net.forward("prob");
         std::string runTime = "run time: " + std::to_string((cv::getTickCount() - start) / cv::getTickFrequency());
         runTime.erase(runTime.end() - 3, runTime.end());
 
-        cv::Mat mat = score.reshape(1, 1); // The dimension becomes 1*1000.
-
+        const cv::Mat mat = score.reshape(1, 1); // The dimension becomes 1*1000.
         double probability; // Maximum similarity.
         cv::Point index;
         cv::minMaxLoc(mat, NULL, &probability, NULL, &index);
@@ -95,7 +105,7 @@ int main()
 
         cv::putText(source, runTime, cv::Point(10, source.size().height - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0), 1, 5);
 
-        cv::putText(source, "probability: " + std::to_string(int(probability * 100)), cv::Point(210, source.size().height - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0), 1, 5);
+        cv::putText(source, "probability: " + std::to_string(int(probability * 100)) + "%", cv::Point(210, source.size().height - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0), 1, 5);
 
         const std::string resolution = std::to_string(source.size().width) + "x" + std::to_string(source.size().height);
         cv::putText(source, resolution, cv::Point(source.size().width - 80, source.size().height - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0), 1, 5);

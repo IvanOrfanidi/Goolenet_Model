@@ -76,7 +76,7 @@ int main()
             return EXIT_FAILURE;
         }
 
-        const double start = cv::getTickCount();
+        const auto start = cv::getTickCount();
 
         // Convert the read image to blob.
         static constexpr double scalefactor = 1.0; // The image pixel value is scaled by the scaling factor (Scalefactor).
@@ -90,23 +90,26 @@ int main()
 
         net.setInput(blob, "data");
         const cv::Mat score = net.forward("prob");
-        std::string runTime = "run time: " + std::to_string((cv::getTickCount() - start) / cv::getTickFrequency());
+        std::string runTime = "run time: " + std::to_string(static_cast<double>(cv::getTickCount() - start) / cv::getTickFrequency());
         runTime.erase(runTime.end() - 3, runTime.end());
 
         const cv::Mat mat = score.reshape(1, 1); // The dimension becomes 1*1000.
         double probability; // Maximum similarity.
         cv::Point index;
-        cv::minMaxLoc(mat, NULL, &probability, NULL, &index);
+        cv::minMaxLoc(mat, nullptr, &probability, nullptr, &index);
 
         resize(source, source, cv::Size(WIDTH, HEIGHT), 0, 0);
 
-        const auto& name = labels.at(index.x); // Index corresponding to maximum similarity.
+        const auto& name = labels.at(static_cast<size_t>(index.x)); // Index corresponding to maximum similarity.
         cv::putText(source, name, cv::Point(10, 20), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0, cv::Scalar(0, 0, 255), 1, 5);
 
         cv::putText(source, runTime, cv::Point(10, source.size().height - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0), 1, 5);
-
-        cv::putText(source, "probability: " + std::to_string(int(probability * 100)) + "%", cv::Point(210, source.size().height - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0), 1, 5);
-
+#ifdef NDEBUG
+        cv::putText(source, "in release", cv::Point(150, source.size().height - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0), 1, 5);
+#else
+        cv::putText(source, "in debug", cv::Point(150, source.size().height - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0), 1, 5);
+#endif
+        cv::putText(source, "probability: " + std::to_string(int(probability * 100)) + "%", cv::Point(260, source.size().height - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0), 1, 5);
         const std::string resolution = std::to_string(source.size().width) + "x" + std::to_string(source.size().height);
         cv::putText(source, resolution, cv::Point(source.size().width - 80, source.size().height - 10), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0), 1, 5);
 
